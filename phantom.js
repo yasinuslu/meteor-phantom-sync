@@ -67,8 +67,7 @@ PS.create = function (/* phantom arguments */) {
     },
     createPage: function () {
       var page = syncCreatePage.apply(ph, arguments);
-
-      return {
+      var psPage = {
         _page: page,  // just in case
 
         open: function (/* page.open arguments */) {
@@ -93,6 +92,43 @@ PS.create = function (/* phantom arguments */) {
           page.close();
         }
       };
+
+      psPage.waitForVar = function (varName) {
+        return runSync(function (done) {
+          let startTime = new Date();
+          let endTime = new Date(startTime.getTime() + 1000 * 4);
+          let checkFunction = new Function(
+            `
+              return !!!window['${varName}'];
+            `
+          );
+
+          let check = function () {
+            if(psPage.evaluate(checkFunction)) {
+              done(null, varName);
+            } else if(new Date() < endTime) {
+              setTimeout(check, 100);
+            } else {
+              done(new Error('Timeout '));
+            }
+          };
+
+          check();
+        });
+      };
+
+      psPage.getValue = function (varName) {
+        psPage.waitForVar(varName);
+
+        return psPage.evaluate(new Function(
+          `
+            return window['${varName}'];
+          `
+        ));
+      };
+
+
+      return psPage;
     }
   };
 };
