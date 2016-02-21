@@ -127,6 +127,9 @@ PS.create = function (/* phantom arguments */) {
         ));
       };
 
+      _.each(_.functions(psPage), (fnName) => {
+        psPage[fnName] = Meteor.bindEnvironment(psPage[fnName]);
+      });
 
       return psPage;
     }
